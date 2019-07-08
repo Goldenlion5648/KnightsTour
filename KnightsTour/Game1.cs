@@ -32,12 +32,17 @@ namespace KnightsTour
         List<int[]> validSpaces = new List<int[]>(8);
         List<int[]> computerValidSpacesGlobal = new List<int[]>(8);
 
-        int boardXDim = 8, boardYDim = 8;
+        int boardXDim = 5, boardYDim = 5;
 
         int numMovesMade = 0;
 
         int screenWidth = 800;
         int screenHeight = 800;
+
+        bool isSolved = false;
+        int numIterationsToSolve = 0;
+
+
 
 
         int knightX = 0;
@@ -138,8 +143,12 @@ namespace KnightsTour
                 knightX = x;
                 knightY = y;
 
-                findValidSpaces();
+                findValidSpaces(ref validSpaces);
                 //computerFindValidSpaces(ref computerValidSpacesGlobal);
+                //makeRandomLevel();
+                int a = 0;
+                solveKnightsTour(ref validSpaces, ref a, ref board,  ref knightX,  ref knightY);
+
                 hasDoneOneTimeCode = true;
             }
 
@@ -166,7 +175,8 @@ namespace KnightsTour
 
                     }
                 }
-                findValidSpaces();
+                findValidSpaces(ref validSpaces);
+
             }
 
             if (kb.IsKeyDown(Keys.U) && oldkb.IsKeyUp(Keys.U))
@@ -184,7 +194,8 @@ namespace KnightsTour
                                 knight.setPos(board[y, x].getRec());
                                 knightX = x;
                                 knightY = y;
-                                findValidSpaces();
+                                findValidSpaces(ref validSpaces);
+
                                 x = boardXDim;
                                 y = boardYDim;
                             }
@@ -217,7 +228,8 @@ namespace KnightsTour
                                 knightX = x;
                                 knightY = y;
 
-                                findValidSpaces();
+                                findValidSpaces(ref validSpaces);
+
                                 y = boardYDim;
                                 break;
                             }
@@ -244,7 +256,8 @@ namespace KnightsTour
                         knightY = a[0];
                         numMovesMade++;
                         board[knightY, knightX].moveNumber = numMovesMade;
-                        findValidSpaces();
+                        findValidSpaces(ref validSpaces);
+
 
                         break;
                     }
@@ -254,6 +267,70 @@ namespace KnightsTour
 
         public void makeRandomLevel()
         {
+            if (validSpaces.Count == 0)
+                return;
+            int randPos = rand.Next(0, validSpaces.Count);
+
+
+            var a = validSpaces[randPos];
+            if (numMovesMade == 0)
+            {
+                numMovesMade++;
+                board[knightY, knightX].moveNumber = numMovesMade;
+            }
+            knight.setPos(board[a[0], a[1]].getRec());
+            knightX = a[1];
+            knightY = a[0];
+            numMovesMade++;
+            board[knightY, knightX].moveNumber = numMovesMade;
+            findValidSpaces(ref validSpaces);
+
+
+            makeRandomLevel();
+
+
+        }
+
+        public bool solveKnightsTour(ref List<int[]> currentPossibleMoves, ref int paramMovesMade, ref Character[,] paramBoard,
+             ref int paramKnightX,  ref int paramKnightY)
+        {
+            if (paramMovesMade == boardXDim * boardYDim - 1)
+                isSolved = true;
+            if (isSolved)
+                return true;
+            if (currentPossibleMoves.Count == 0)
+                return false;
+
+
+            List<int[]> newPossibleMoves = currentPossibleMoves;
+            int newKnightX = paramKnightX;
+            int newKnightY = paramKnightY;
+
+            numIterationsToSolve++;
+            for (int i = 0; i < newPossibleMoves.Count; i++)
+            {
+                var a = newPossibleMoves[i];
+
+
+                if (paramMovesMade == 0)
+                {
+                    paramMovesMade++;
+                    paramBoard[newKnightY, newKnightX].moveNumber = paramMovesMade;
+                }
+                knight.setPos(paramBoard[a[0], a[1]].getRec());
+                newKnightX = a[1];
+                newKnightY = a[0];
+                //numMovesMade++;
+                paramBoard[newKnightY, newKnightX].moveNumber = paramMovesMade;
+                findValidSpaces(ref newPossibleMoves);
+
+
+                if (solveKnightsTour(ref newPossibleMoves, ref paramMovesMade, ref paramBoard, ref paramKnightX, ref paramKnightY))
+                    break;
+                //makeRandomLevel();
+
+            }
+            return false;
 
         }
 
@@ -272,24 +349,24 @@ namespace KnightsTour
         //    }
         //}
 
-        public void findValidSpaces()
+        public void findValidSpaces(ref List<int[]> listToAdjust)
         {
-            for (int i = 0; i < validSpaces.Count;)
+            for (int i = 0; i < listToAdjust.Count;)
             {
-                validSpaces.RemoveAt(i);
+                listToAdjust.RemoveAt(i);
             }
 
-            addValidSpace(knightX - 2, knightY - 1);
-            addValidSpace(knightX - 2, knightY + 1);
+            addValidSpace(knightX - 2, knightY - 1, ref listToAdjust);
+            addValidSpace(knightX - 2, knightY + 1, ref listToAdjust);
 
-            addValidSpace(knightX + 1, knightY - 2);
-            addValidSpace(knightX - 1, knightY - 2);
+            addValidSpace(knightX + 1, knightY - 2, ref listToAdjust);
+            addValidSpace(knightX - 1, knightY - 2, ref listToAdjust);
 
-            addValidSpace(knightX + 2, knightY + 1);
-            addValidSpace(knightX + 2, knightY - 1);
+            addValidSpace(knightX + 2, knightY + 1, ref listToAdjust);
+            addValidSpace(knightX + 2, knightY - 1, ref listToAdjust);
 
-            addValidSpace(knightX - 1, knightY + 2);
-            addValidSpace(knightX + 1, knightY + 2);
+            addValidSpace(knightX - 1, knightY + 2, ref listToAdjust);
+            addValidSpace(knightX + 1, knightY + 2, ref listToAdjust);
         }
 
         //public void computerFindValidSpaces(ref List<int[]> computerValidSpaces)
@@ -332,7 +409,7 @@ namespace KnightsTour
                 hasWon = true;
         }
 
-        public void addValidSpace(int xPos, int yPos)
+        public void addValidSpace(int xPos, int yPos, ref List<int[]> listToAddTo)
         {
             int[] tempArray = new int[2];
 
@@ -340,7 +417,7 @@ namespace KnightsTour
             {
                 tempArray[0] = yPos;
                 tempArray[1] = xPos;
-                validSpaces.Add(tempArray);
+                listToAddTo.Add(tempArray);
             }
         }
 
@@ -431,6 +508,9 @@ namespace KnightsTour
                 spriteBatch.DrawString(testFont, "You did it!", new Vector2(screenWidth / 2 - 75, screenHeight / 2 - 30), Color.Black);
 
             }
+
+            spriteBatch.DrawString(testFont, "Iterations: " + numIterationsToSolve, new Vector2(screenWidth / 2 - 75, screenHeight / 2 - 30), Color.Blue);
+
             spriteBatch.End();
             // TODO: Add your drawing code here
 
