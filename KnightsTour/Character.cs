@@ -19,6 +19,7 @@ namespace KnightsTour
         public bool isMoving{ get; set; }
 
         public int moveNumber { get; set; }
+        public int solutionNumber { get; set; }
 
         public int totalFrames { get; set; }
         public int currentFrame { get; set; }
