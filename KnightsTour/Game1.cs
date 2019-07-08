@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace KnightsTour
 {
@@ -18,11 +19,13 @@ namespace KnightsTour
         MouseState mouse, oldmouse;
         Point mousePos;
         SpriteFont testFont;
+        Random rand = new Random(20);
 
-        
+
 
         //Character player, playerCopyTopAndBottom, playerCopyLeftAndRight;
         Character[,] board;
+        Character[,] tokens;
         Character knight;
         int playerWidth = 64, playerHeight = 64;
 
@@ -36,6 +39,7 @@ namespace KnightsTour
         int screenWidth = 800;
         int screenHeight = 800;
 
+
         int knightX = 0;
         int knightY = 0;
 
@@ -45,6 +49,8 @@ namespace KnightsTour
         bool didWork = false;
 
         bool isPressingKey = false;
+        bool hasWon = false;
+
 
         public Game1()
         {
@@ -81,6 +87,7 @@ namespace KnightsTour
             testFont = Content.Load<SpriteFont>("testFont");
 
             board = new Character[boardYDim, boardXDim];
+            tokens = new Character[boardYDim, boardXDim];
 
             knight = new Character(Content.Load<Texture2D>("chessKnight"),
                         new Rectangle(0, 0, (screenWidth / boardXDim), (screenHeight / boardYDim)));
@@ -90,6 +97,8 @@ namespace KnightsTour
                 for (int x = 0; x < boardXDim; x++)
                 {
                     board[y, x] = new Character(Content.Load<Texture2D>("blankSquare"),
+                        new Rectangle(x * (screenWidth / boardXDim), y * (screenHeight / boardYDim), (screenWidth / boardXDim), (screenHeight / boardYDim)));
+                    tokens[y, x] = new Character(Content.Load<Texture2D>("whiteCircle"),
                         new Rectangle(x * (screenWidth / boardXDim), y * (screenHeight / boardYDim), (screenWidth / boardXDim), (screenHeight / boardYDim)));
                 }
             }
@@ -130,12 +139,13 @@ namespace KnightsTour
                 knightY = y;
 
                 findValidSpaces();
-                computerFindValidSpaces(ref computerValidSpacesGlobal);
+                //computerFindValidSpaces(ref computerValidSpacesGlobal);
                 hasDoneOneTimeCode = true;
             }
 
             userControls();
 
+            checkWins();
 
             oldmouse = mouse;
             oldkb = kb;
@@ -145,7 +155,7 @@ namespace KnightsTour
 
         public void userControls()
         {
-            if(kb.IsKeyDown(Keys.R) && oldkb.IsKeyUp(Keys.R))
+            if (kb.IsKeyDown(Keys.R) && oldkb.IsKeyUp(Keys.R))
             {
                 numMovesMade = 0;
                 for (int y = 0; y < boardYDim; y++)
@@ -157,6 +167,31 @@ namespace KnightsTour
                     }
                 }
                 findValidSpaces();
+            }
+
+            if (kb.IsKeyDown(Keys.U) && oldkb.IsKeyUp(Keys.U))
+            {
+                if (numMovesMade > 0)
+                {
+                    for (int y = 0; y < boardYDim; y++)
+                    {
+                        for (int x = 0; x < boardXDim; x++)
+                        {
+                            if (board[y, x].moveNumber == numMovesMade - 1)
+                            {
+                                board[knightY, knightX].moveNumber = 0;
+                                numMovesMade--;
+                                knight.setPos(board[y, x].getRec());
+                                knightX = x;
+                                knightY = y;
+                                findValidSpaces();
+                                x = boardXDim;
+                                y = boardYDim;
+                            }
+
+                        }
+                    }
+                }
             }
 
             //if (kb.IsKeyDown(Keys.C) && oldkb.IsKeyUp(Keys.C))
@@ -199,11 +234,16 @@ namespace KnightsTour
                     var a = validSpaces[i];
                     if (board[a[0], a[1]].getRec().Contains(mousePos))
                     {
-                        numMovesMade++;
-                        board[knightY, knightX].moveNumber = numMovesMade;
+                        if (numMovesMade == 0)
+                        {
+                            numMovesMade++;
+                            board[knightY, knightX].moveNumber = numMovesMade;
+                        }
                         knight.setPos(board[a[0], a[1]].getRec());
                         knightX = a[1];
                         knightY = a[0];
+                        numMovesMade++;
+                        board[knightY, knightX].moveNumber = numMovesMade;
                         findValidSpaces();
 
                         break;
@@ -212,26 +252,31 @@ namespace KnightsTour
             }
         }
 
-        public void computerMoveToSpot(int y, int x, ref List<int[]> computerValidSpaces)
+        public void makeRandomLevel()
         {
-            knight.setPos(board[y, x].getRec());
-            knightX = x;
-            knightY = y;
 
-            computerFindValidSpaces(ref computerValidSpaces);
-
-            for (int i = 0; i < computerValidSpacesGlobal.Count; i++)
-            {
-                var a = computerValidSpacesGlobal[i];
-                computerMoveToSpot(a[0], a[1], ref computerValidSpacesGlobal);
-            }
         }
+
+        //public void computerMoveToSpot(int y, int x, ref List<int[]> computerValidSpaces)
+        //{
+        //    knight.setPos(board[y, x].getRec());
+        //    knightX = x;
+        //    knightY = y;
+
+        //    computerFindValidSpaces(ref computerValidSpaces);
+
+        //    for (int i = 0; i < computerValidSpacesGlobal.Count; i++)
+        //    {
+        //        var a = computerValidSpacesGlobal[i];
+        //        computerMoveToSpot(a[0], a[1], ref computerValidSpacesGlobal);
+        //    }
+        //}
 
         public void findValidSpaces()
         {
             for (int i = 0; i < validSpaces.Count;)
             {
-                validSpaces.RemoveAt(i);   
+                validSpaces.RemoveAt(i);
             }
 
             addValidSpace(knightX - 2, knightY - 1);
@@ -247,24 +292,44 @@ namespace KnightsTour
             addValidSpace(knightX + 1, knightY + 2);
         }
 
-        public void computerFindValidSpaces(ref List<int[]> computerValidSpaces)
+        //public void computerFindValidSpaces(ref List<int[]> computerValidSpaces)
+        //{
+        //    for (int i = 0; i < computerValidSpaces.Count;)
+        //    {
+        //        computerValidSpaces.RemoveAt(i);
+        //    }
+
+        //    computerAddValidSpace(knightX - 2, knightY - 1, ref computerValidSpaces);
+        //    computerAddValidSpace(knightX - 2, knightY + 1, ref computerValidSpaces);
+
+        //    computerAddValidSpace(knightX + 1, knightY - 2, ref computerValidSpaces);
+        //    computerAddValidSpace(knightX - 1, knightY - 2, ref computerValidSpaces);
+
+        //    computerAddValidSpace(knightX + 2, knightY + 1, ref computerValidSpaces);
+        //    computerAddValidSpace(knightX + 2, knightY - 1, ref computerValidSpaces);
+
+        //    computerAddValidSpace(knightX - 1, knightY + 2, ref computerValidSpaces);
+        //    computerAddValidSpace(knightX + 1, knightY + 2, ref computerValidSpaces);
+        //}
+
+        public void checkWins()
         {
-            for (int i = 0; i < computerValidSpaces.Count;)
-            {
-                computerValidSpaces.RemoveAt(i);
-            }
+            //hasWon = true;
+            //for (int y = 0; y < boardYDim; y++)
+            //{
+            //    for (int x = 0; x < boardXDim; x++)
+            //    {
+            //        if (board[y, x].moveNumber == 0)
+            //        {
+            //            hasWon = false;
+            //            y = boardYDim;
+            //            x = boardXDim;
+            //        }
+            //    }
+            //}
 
-            computerAddValidSpace(knightX - 2, knightY - 1, ref computerValidSpaces);
-            computerAddValidSpace(knightX - 2, knightY + 1, ref computerValidSpaces);
-
-            computerAddValidSpace(knightX + 1, knightY - 2, ref computerValidSpaces);
-            computerAddValidSpace(knightX - 1, knightY - 2, ref computerValidSpaces);
-
-            computerAddValidSpace(knightX + 2, knightY + 1, ref computerValidSpaces);
-            computerAddValidSpace(knightX + 2, knightY - 1, ref computerValidSpaces);
-
-            computerAddValidSpace(knightX - 1, knightY + 2, ref computerValidSpaces);
-            computerAddValidSpace(knightX + 1, knightY + 2, ref computerValidSpaces);
+            if (numMovesMade == boardXDim * boardYDim - 1)
+                hasWon = true;
         }
 
         public void addValidSpace(int xPos, int yPos)
@@ -279,17 +344,17 @@ namespace KnightsTour
             }
         }
 
-        public void computerAddValidSpace(int xPos, int yPos, ref List<int[]> computerValidSpaces)
-        {
-            int[] tempArray = new int[2];
+        //public void computerAddValidSpace(int xPos, int yPos, ref List<int[]> computerValidSpaces)
+        //{
+        //    int[] tempArray = new int[2];
 
-            if (xPos >= 0 && xPos < boardXDim && yPos >= 0 && yPos < boardYDim && board[yPos, xPos].moveNumber == 0)
-            {
-                tempArray[0] = yPos;
-                tempArray[1] = xPos;
-                computerValidSpaces.Add(tempArray);
-            }
-        }
+        //    if (xPos >= 0 && xPos < boardXDim && yPos >= 0 && yPos < boardYDim && board[yPos, xPos].moveNumber == 0)
+        //    {
+        //        tempArray[0] = yPos;
+        //        tempArray[1] = xPos;
+        //        computerValidSpaces.Add(tempArray);
+        //    }
+        //}
 
         /// <summary>
         /// This is called when the game should draw itself.
@@ -314,15 +379,15 @@ namespace KnightsTour
                     for (int i = 0; i < validSpaces.Count; i++)
                     {
                         var a = validSpaces[i];
-                        var b = computerValidSpacesGlobal[i];
+                        //var b = computerValidSpacesGlobal[i];
 
 
 
-                        if (b[0] == y && b[1] == x && gameClock % 100 > 50)
-                        {
-                            board[y, x].drawCharacter(spriteBatch, Color.Salmon);
+                        //if (b[0] == y && b[1] == x && gameClock % 100 > 50)
+                        //{
+                        //    board[y, x].drawCharacter(spriteBatch, Color.Salmon);
 
-                        }
+                        //}
 
                         if (a[0] == y && a[1] == x && gameClock % 100 > 50)
                         {
@@ -332,14 +397,24 @@ namespace KnightsTour
                     }
 
                     if (board[y, x].moveNumber != 0)
-                        spriteBatch.DrawString(testFont, board[y, x].moveNumber.ToString(), board[y, x].getRec().Center.ToVector2(), Color.Red);
+                    {
+                        if (numMovesMade - board[y, x].moveNumber > 0)
+                            tokens[y, x].drawCharacter(spriteBatch, Color.Black);
+
+                        spriteBatch.DrawString(testFont, board[y, x].moveNumber.ToString(),
+                            new Vector2(board[y, x].getRec().Center.X - 5, board[y, x].getRec().Center.Y - 10), Color.Red);
+                    }
                 }
             }
 
 
 
-            knight.drawCharacter(spriteBatch);
 
+
+            knight.drawCharacter(spriteBatch);
+            if (board[knightY, knightX].moveNumber != 0)
+                spriteBatch.DrawString(testFont, board[knightY, knightX].moveNumber.ToString(),
+                            new Vector2(board[knightY, knightX].getRec().Center.X - 5, board[knightY, knightX].getRec().Center.Y - 10), Color.Red);
 
             //spriteBatch.DrawString(testFont, "MouseX: " + mousePos.X + "\nMouseY: " + mousePos.Y, new Vector2(200, 200), Color.Pink);
             //spriteBatch.DrawString(testFont, "didWork: " + didWork, new Vector2(200, 280), Color.Pink);
@@ -348,6 +423,12 @@ namespace KnightsTour
             if (numMovesMade == 0)
             {
                 spriteBatch.DrawString(testFont, "Choose a starting \nsquare with right click", new Vector2(200, 400), Color.Black);
+
+            }
+
+            if (hasWon)
+            {
+                spriteBatch.DrawString(testFont, "You did it!", new Vector2(screenWidth / 2 - 75, screenHeight / 2 - 30), Color.Black);
 
             }
             spriteBatch.End();
